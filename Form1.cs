@@ -44,7 +44,7 @@
             dataGridView1.AlternatingRowsDefaultCellStyle.BackColor = Color.LightGray;
 
             // 百分比
-            double[] columnPercentages = [7, 25, 18, 8, 12, 20];
+            double[] columnPercentages = [35, 18, 8, 12, 26];
             int totalWidth = dataGridView1.Width - dataGridView1.RowHeadersWidth;
             // 分配列宽
             for (int i = 0; i < dataGridView1.Columns.Count; i++)
@@ -52,7 +52,7 @@
                 dataGridView1.Columns[i].HeaderCell.Style.WrapMode = DataGridViewTriState.False;
                 if (i == dataGridView1.Columns.Count - 1)
                 {
-                    dataGridView1.Columns[i].Width = totalWidth - 2 - (dataGridView1.Columns[0].Width + dataGridView1.Columns[1].Width + dataGridView1.Columns[2].Width + dataGridView1.Columns[3].Width + dataGridView1.Columns[4].Width);
+                    dataGridView1.Columns[i].Width = totalWidth -(dataGridView1.Columns[0].Width + dataGridView1.Columns[1].Width + dataGridView1.Columns[2].Width + dataGridView1.Columns[3].Width);
                     break;
                 }
                 int newWidth = (int)(totalWidth * columnPercentages[i] / 100);
@@ -108,7 +108,7 @@
             {
                 DataGridViewCell cell = new DataGridViewTextBoxCell();
                 cell.Value = rowData[i];
-                if (i == 5 && rowData[i] == "确认主密码是否正确！")
+                if (i == 4 && rowData[i] == "确认主密码是否正确！")
                 {
                     cell.Style.ForeColor = Color.Red;
                 }
@@ -134,7 +134,6 @@
                     sid = Xclass.GetSid();
                 }
                 dataGridView1.Rows.Clear();
-                int index = 1;
                 foreach (string element in selectedFiles)
                 {
                     var session = Xclass.FileParser(element, sid);
@@ -144,9 +143,7 @@
                         session.password = error;
                     }
 
-                    AddRowToDataGridView(new List<object> { index, element, session.host, session.port, session.userName, session.password });
-
-                    index++;
+                    AddRowToDataGridView(new List<object> { element, session.host, session.port, session.userName, session.password });
                 }
                 // 写入配置到注册表
                 RegistryCache.WriteToRegistry(appKey, "path", pathRichTextBox.Text);
@@ -176,5 +173,23 @@
             }
         }
 
+        private void dataGridView1_RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
+        {
+            using (SolidBrush brush = new SolidBrush(dataGridView1.RowHeadersDefaultCellStyle.ForeColor))
+            {
+                // 计算行号（e.RowIndex 从 0 开始，所以要 +1）
+                string rowIndex = (e.RowIndex + 1).ToString();
+
+                // 获取行头的绘制区域
+                SizeF size = e.Graphics.MeasureString(rowIndex, dataGridView1.Font);
+
+                // 计算绘制位置，使文本居中对齐
+                float x = e.RowBounds.Left + (dataGridView1.RowHeadersWidth - size.Width) / 2;
+                float y = e.RowBounds.Top + (e.RowBounds.Height - size.Height) / 2;
+
+                // 绘制行号
+                e.Graphics.DrawString(rowIndex, dataGridView1.Font, brush, x, y);
+            }
+        }
     }
 }

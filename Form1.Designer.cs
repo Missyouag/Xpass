@@ -42,7 +42,6 @@
             openFileDialog1 = new OpenFileDialog();
             folderBrowserDialog1 = new FolderBrowserDialog();
             dataGridView1 = new DataGridView();
-            Column1 = new DataGridViewTextBoxColumn();
             Column2 = new DataGridViewTextBoxColumn();
             Column3 = new DataGridViewTextBoxColumn();
             Column4 = new DataGridViewTextBoxColumn();
@@ -155,7 +154,7 @@
             dataGridViewCellStyle1.WrapMode = DataGridViewTriState.True;
             dataGridView1.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
-            dataGridView1.Columns.AddRange(new DataGridViewColumn[] { Column1, Column2, Column3, Column4, Column5, Column6 });
+            dataGridView1.Columns.AddRange(new DataGridViewColumn[] { Column2, Column3, Column4, Column5, Column6 });
             dataGridView1.Location = new Point(12, 178);
             dataGridView1.Name = "dataGridView1";
             dataGridView1.ReadOnly = true;
@@ -164,12 +163,7 @@
             dataGridView1.RowTemplate.Height = 25;
             dataGridView1.Size = new Size(660, 371);
             dataGridView1.TabIndex = 7;
-            // 
-            // Column1
-            // 
-            Column1.HeaderText = "序号";
-            Column1.Name = "Column1";
-            Column1.ReadOnly = true;
+            dataGridView1.RowPostPaint += dataGridView1_RowPostPaint;
             // 
             // Column2
             // 
