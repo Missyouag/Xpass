@@ -1,4 +1,6 @@
-﻿namespace Xpass
+﻿using System.Text;
+
+namespace Xpass
 {
     public partial class Form1 : Form
     {
@@ -52,7 +54,7 @@
                 dataGridView1.Columns[i].HeaderCell.Style.WrapMode = DataGridViewTriState.False;
                 if (i == dataGridView1.Columns.Count - 1)
                 {
-                    dataGridView1.Columns[i].Width = totalWidth -(dataGridView1.Columns[0].Width + dataGridView1.Columns[1].Width + dataGridView1.Columns[2].Width + dataGridView1.Columns[3].Width);
+                    dataGridView1.Columns[i].Width = totalWidth - (dataGridView1.Columns[0].Width + dataGridView1.Columns[1].Width + dataGridView1.Columns[2].Width + dataGridView1.Columns[3].Width);
                     break;
                 }
                 int newWidth = (int)(totalWidth * columnPercentages[i] / 100);
@@ -191,5 +193,85 @@
                 e.Graphics.DrawString(rowIndex, dataGridView1.Font, brush, x, y);
             }
         }
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            // 判断表格是否为空
+            if (dataGridView1.Rows.Count == 0 || (dataGridView1.Rows.Count == 1 && dataGridView1.Rows[0].IsNewRow))
+            {
+                MessageBox.Show("没有会话信息，无法导出！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            SaveFileDialog saveFileDialog = new SaveFileDialog
+            {
+                Filter = "CSV 文件 (*.csv)|*.csv",
+                Title = "保存 CSV 文件",
+                FileName = "xshell会话.csv"
+            };
+
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                ExportDataGridViewToCSV(dataGridView1, saveFileDialog.FileName);
+            }
+        }
+
+        void ExportDataGridViewToCSV(DataGridView dgv, string filePath)
+        {
+            try
+            {
+                StringBuilder csvContent = new StringBuilder();
+
+                // 添加表头
+                for (int i = 0; i < dgv.Columns.Count; i++)
+                {
+                    csvContent.Append(FormatCsvField(dgv.Columns[i].HeaderText));
+                    if (i < dgv.Columns.Count - 1)
+                        csvContent.Append(",");
+                }
+                csvContent.AppendLine();
+
+                // 添加数据行
+                foreach (DataGridViewRow row in dgv.Rows)
+                {
+                    if (!row.IsNewRow)
+                    {
+                        for (int i = 0; i < dgv.Columns.Count; i++)
+                        {
+                            csvContent.Append(FormatCsvField(row.Cells[i].Value?.ToString()));
+                            if (i < dgv.Columns.Count - 1)
+                                csvContent.Append(",");
+                        }
+                        csvContent.AppendLine();
+                    }
+                }
+
+                // 保存到文件
+                File.WriteAllText(filePath, csvContent.ToString(), Encoding.UTF8);
+                MessageBox.Show("数据导出成功！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("导出失败: " + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        // 处理 CSV 格式，避免逗号、双引号、换行符导致解析错误
+        string FormatCsvField(string field)
+        {
+            if (string.IsNullOrEmpty(field))
+                return "\"\""; // 空值用双引号包裹，表示为空字符串
+
+            bool containsSpecialChars = field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r");
+            if (containsSpecialChars)
+            {
+                // 替换双引号为两个双引号（CSV 规范）
+                field = field.Replace("\"", "\"\"");
+                return $"\"{field}\""; // 用双引号包裹字段
+            }
+
+            return field;
+        }
+
+
     }
 }
