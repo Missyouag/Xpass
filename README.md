@@ -2,7 +2,8 @@
 
 Decrypt Xshell session file password.
 
-![image](https://github.com/ssmmtt/Xpass/assets/16244320/f10099ca-90ef-4c89-aa86-306236cda0cd)
+![image](https://github.com/user-attachments/assets/970d336e-f1c9-4704-979f-d3b26092539f)
+
 
 ## Star History
 
