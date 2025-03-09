@@ -15,28 +15,32 @@ namespace Xpass
 
         private void LoadLastConfig()
         {
-            string path = RegistryCache.ReadFromRegistry(appKey, "path");
-            string passwd = RegistryCache.ReadFromRegistry(appKey, "passwd");
-            if (path != null)
+            var path = RegistryCache.ReadFromRegistry(appKey, "path");
+            var passwd = RegistryCache.ReadFromRegistry(appKey, "passwd");
+
+            if (!string.IsNullOrEmpty(path))
             {
                 pathRichTextBox.Text = path;
-                string[] tmp = path.Split("\n");
-                if (tmp.Length == 1 && !tmp[0].EndsWith(".xsh"))
+                var paths = path.Split('\n', StringSplitOptions.RemoveEmptyEntries);
+
+                if (paths.Length == 1 && !paths[0].EndsWith(".xsh", StringComparison.OrdinalIgnoreCase))
                 {
-                    // 此时是目录
-                    selectedFiles = Xclass.GetXshFiles(tmp[0]);
+                    // 处理目录情况
+                    selectedFiles = Xclass.GetXshFiles(paths[0]) ?? [];
                 }
                 else
                 {
-                    // 文件列表
-                    selectedFiles.AddRange(tmp.Take(tmp.Length - 1));
+                    // 处理文件列表情况
+                    selectedFiles.AddRange(paths);
                 }
             }
-            if (passwd != null)
+
+            if (!string.IsNullOrEmpty(passwd))
             {
                 masterPasswdTextBox.Text = passwd;
             }
         }
+
 
         private void ImproveDataGridView()
         {
@@ -103,20 +107,21 @@ namespace Xpass
         private void AddRowToDataGridView(List<object> rowData)
         {
             // 创建新的行
-            DataGridViewRow row = new DataGridViewRow();
+            DataGridViewRow row = new();
 
             // 添加每一列的单元格
             for (int i = 0; i < rowData.Count; i++)
             {
-                DataGridViewCell cell = new DataGridViewTextBoxCell();
-                cell.Value = rowData[i];
-                if (i == 4 && rowData[i] == "确认主密码是否正确！")
+                var cell = new DataGridViewTextBoxCell { Value = rowData[i] };
+
+                if (i == 4 && cell.Value?.ToString() == "确认主密码是否正确！")
                 {
                     cell.Style.ForeColor = Color.Red;
                 }
 
                 row.Cells.Add(cell);
             }
+
 
             // 将行添加到DataGridView
             dataGridView1.Rows.Add(row);
@@ -145,7 +150,7 @@ namespace Xpass
                         session.password = error;
                     }
 
-                    AddRowToDataGridView(new List<object> { element, session.host, session.port, session.userName, session.password });
+                    AddRowToDataGridView([element, session.host, session.port, session.userName, session.password]);
                 }
                 // 写入配置到注册表
                 RegistryCache.WriteToRegistry(appKey, "path", pathRichTextBox.Text);
@@ -177,21 +182,19 @@ namespace Xpass
 
         private void dataGridView1_RowPostPaint(object sender, DataGridViewRowPostPaintEventArgs e)
         {
-            using (SolidBrush brush = new SolidBrush(dataGridView1.RowHeadersDefaultCellStyle.ForeColor))
-            {
-                // 计算行号（e.RowIndex 从 0 开始，所以要 +1）
-                string rowIndex = (e.RowIndex + 1).ToString();
+            using SolidBrush brush = new(dataGridView1.RowHeadersDefaultCellStyle.ForeColor);
+            // 计算行号（e.RowIndex 从 0 开始，所以要 +1）
+            string rowIndex = (e.RowIndex + 1).ToString();
 
-                // 获取行头的绘制区域
-                SizeF size = e.Graphics.MeasureString(rowIndex, dataGridView1.Font);
+            // 获取行头的绘制区域
+            SizeF size = e.Graphics.MeasureString(rowIndex, dataGridView1.Font);
 
-                // 计算绘制位置，使文本居中对齐
-                float x = e.RowBounds.Left + (dataGridView1.RowHeadersWidth - size.Width) / 2;
-                float y = e.RowBounds.Top + (e.RowBounds.Height - size.Height) / 2;
+            // 计算绘制位置，使文本居中对齐
+            float x = e.RowBounds.Left + (dataGridView1.RowHeadersWidth - size.Width) / 2;
+            float y = e.RowBounds.Top + (e.RowBounds.Height - size.Height) / 2;
 
-                // 绘制行号
-                e.Graphics.DrawString(rowIndex, dataGridView1.Font, brush, x, y);
-            }
+            // 绘制行号
+            e.Graphics.DrawString(rowIndex, dataGridView1.Font, brush, x, y);
         }
 
         private void button1_Click(object sender, EventArgs e)
@@ -202,7 +205,7 @@ namespace Xpass
                 MessageBox.Show("没有会话信息，无法导出！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
-            SaveFileDialog saveFileDialog = new SaveFileDialog
+            SaveFileDialog saveFileDialog = new()
             {
                 Filter = "CSV 文件 (*.csv)|*.csv",
                 Title = "保存 CSV 文件",
@@ -215,18 +218,18 @@ namespace Xpass
             }
         }
 
-        void ExportDataGridViewToCSV(DataGridView dgv, string filePath)
+        static void ExportDataGridViewToCSV(DataGridView dgv, string filePath)
         {
             try
             {
-                StringBuilder csvContent = new StringBuilder();
+                StringBuilder csvContent = new();
 
                 // 添加表头
                 for (int i = 0; i < dgv.Columns.Count; i++)
                 {
                     csvContent.Append(FormatCsvField(dgv.Columns[i].HeaderText));
                     if (i < dgv.Columns.Count - 1)
-                        csvContent.Append(",");
+                        csvContent.Append(',');
                 }
                 csvContent.AppendLine();
 
@@ -237,13 +240,14 @@ namespace Xpass
                     {
                         for (int i = 0; i < dgv.Columns.Count; i++)
                         {
-                            csvContent.Append(FormatCsvField(row.Cells[i].Value?.ToString()));
+                            csvContent.Append(FormatCsvField(row.Cells[i].Value?.ToString() ?? string.Empty));  // 确保不会传递 null
                             if (i < dgv.Columns.Count - 1)
-                                csvContent.Append(",");
+                                csvContent.Append(',');
                         }
                         csvContent.AppendLine();
                     }
                 }
+
 
                 // 保存到文件
                 File.WriteAllText(filePath, csvContent.ToString(), Encoding.UTF8);
@@ -256,12 +260,12 @@ namespace Xpass
         }
 
         // 处理 CSV 格式，避免逗号、双引号、换行符导致解析错误
-        string FormatCsvField(string field)
+        static string FormatCsvField(string field)
         {
             if (string.IsNullOrEmpty(field))
                 return "\"\""; // 空值用双引号包裹，表示为空字符串
 
-            bool containsSpecialChars = field.Contains(",") || field.Contains("\"") || field.Contains("\n") || field.Contains("\r");
+            bool containsSpecialChars = field.Contains(',') || field.Contains('\"') || field.Contains('\n') || field.Contains('\r');
             if (containsSpecialChars)
             {
                 // 替换双引号为两个双引号（CSV 规范）

@@ -22,7 +22,7 @@ namespace Xpass
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ConvertSidToStringSid(IntPtr sid, out IntPtr stringSid);
 
-        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool LookupAccountName(
             string lpSystemName,
@@ -37,10 +37,12 @@ namespace Xpass
         public static Xsh FileParser(string xshPath, string sid)
         {
 
-            Xsh xsh = new();
-            xsh.isok = true;
+            Xsh xsh = new()
+            {
+                isok = true
+            };
 
-            using (StreamReader sr = new StreamReader(xshPath))
+            using (StreamReader sr = new(xshPath))
             {
                 string? line;
                 while ((line = sr.ReadLine()) != null)
@@ -86,87 +88,106 @@ namespace Xpass
             string userName = Environment.UserName;
             string computerName = Environment.MachineName;
 
-            IntPtr sid = IntPtr.Zero;
             int cbSid = 0;
             int cchReferencedDomainName = 0;
-            int peUse;
 
-            LookupAccountName(computerName, userName, IntPtr.Zero, ref cbSid, null, ref cchReferencedDomainName, out peUse);
-
-            sid = Marshal.AllocHGlobal(cbSid);
-            StringBuilder referencedDomainName = new StringBuilder(cchReferencedDomainName);
-
-            if (LookupAccountName(computerName, userName, sid, ref cbSid, referencedDomainName, ref cchReferencedDomainName, out peUse))
+            // 获取SID和域名的大小
+            if (!LookupAccountName(computerName, userName, IntPtr.Zero, ref cbSid, null, ref cchReferencedDomainName, out _))
             {
-                IntPtr stringSid;
-
-                if (ConvertSidToStringSid(sid, out stringSid))
-                {
-                    string key = ReverseString(Marshal.PtrToStringAuto(stringSid)) + userName;
-                    // Free allocated memory
-                    Marshal.FreeHGlobal(sid);
-                    Marshal.FreeHGlobal(stringSid);
-                    return key;
-                }
+                return string.Empty; // 错误处理：如果获取失败则直接返回空
             }
-            return "";
-        }
 
-
-
-        public static List<string> GetXshFiles(string directory)
-        {
-            List<string> xshFiles = new List<string>();
+            // 分配内存
+            IntPtr sid = Marshal.AllocHGlobal(cbSid);
+            StringBuilder referencedDomainName = new(cchReferencedDomainName);
 
             try
             {
-                // 获取当前目录下的所有 .xsh 文件
-                string[] files = Directory.GetFiles(directory, "*.xsh");
-
-                // 将当前目录下的 .xsh 文件添加到列表中
-                xshFiles.AddRange(files);
-
-                // 获取当前目录下的所有子目录
-                string[] subdirectories = Directory.GetDirectories(directory);
-
-                // 递归遍历子目录
-                foreach (var subdirectory in subdirectories)
+                // 获取SID和域名
+                if (LookupAccountName(computerName, userName, sid, ref cbSid, referencedDomainName, ref cchReferencedDomainName, out int peUse))
                 {
-                    // 递归获取子目录下的 .xsh 文件
+                    // 将SID转换为字符串
+                    if (ConvertSidToStringSid(sid, out IntPtr stringSid))
+                    {
+                        string reversedString = stringSid != IntPtr.Zero ? ReverseString(Marshal.PtrToStringAuto(stringSid) ?? string.Empty) : string.Empty;
+                        return reversedString + userName;
+                    }
+                }
+            }
+            finally
+            {
+                // 释放内存
+                Marshal.FreeHGlobal(sid);
+            }
+
+            return string.Empty; // 如果其他操作失败，返回空字符串
+        }
+
+
+
+
+
+
+public static List<string> GetXshFiles(string directory)
+    {
+        List<string> xshFiles = [];
+
+        try
+        {
+            // 获取当前目录下的所有 .xsh 文件
+            xshFiles.AddRange(Directory.GetFiles(directory, "*.xsh"));
+
+            // 获取当前目录下的所有子目录
+            string[] subdirectories = Directory.GetDirectories(directory);
+
+            // 递归遍历子目录并并行化处理
+            Parallel.ForEach(subdirectories, subdirectory =>
+            {
+                try
+                {
+                    // 获取子目录下的 .xsh 文件
                     List<string> subdirectoryXshFiles = GetXshFiles(subdirectory);
 
                     // 将子目录下的 .xsh 文件添加到列表中
-                    xshFiles.AddRange(subdirectoryXshFiles);
+                    lock (xshFiles) // 使用锁确保线程安全
+                    {
+                        xshFiles.AddRange(subdirectoryXshFiles);
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"发生异常: {ex.Message}");
-            }
-
-            return xshFiles;
+                catch (Exception ex)
+                {
+                    // 处理子目录的异常并继续其他目录
+                    Console.WriteLine($"子目录 {subdirectory} 发生异常: {ex.Message}");
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"目录 {directory} 发生异常: {ex.Message}");
         }
 
-        public static string? Decrypt(string sid, string encryptPw)
+        return xshFiles;
+    }
+
+
+    public static string? Decrypt(string sid, string encryptPw)
         {
 
             byte[] v1 = Convert.FromBase64String(encryptPw);
             byte[] key = System.Security.Cryptography.SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(sid));
 
-            using (var rc4 = new RC4(key))
-            {
-                byte[] v3 = rc4.TransformFinalBlock(v1, 0, v1.Length - 0x20);
-                byte[] expectedHash = new byte[32];
-                Array.Copy(v1, v1.Length - 32, expectedHash, 0, 32);
+            using var rc4 = new RC4(key);
+            byte[] v3 = rc4.TransformFinalBlock(v1, 0, v1.Length - 0x20);
+            byte[] expectedHash = new byte[32];
+            Array.Copy(v1, v1.Length - 32, expectedHash, 0, 32);
 
-                if (StructuralComparisons.StructuralEqualityComparer.Equals(System.Security.Cryptography.SHA256.Create().ComputeHash(v3), expectedHash))
-                {
-                    return Encoding.ASCII.GetString(v3);
-                }
-                else
-                {
-                    return null;
-                }
+            if (StructuralComparisons.StructuralEqualityComparer.Equals(System.Security.Cryptography.SHA256.Create().ComputeHash(v3), expectedHash))
+            {
+                return Encoding.ASCII.GetString(v3);
+            }
+            else
+            {
+                return null;
             }
         }
 
@@ -201,7 +222,7 @@ namespace Xpass
                 Swap(i, j);
             }
 
-            i = j = 0;
+            i = 0;
         }
 
         public byte[] TransformFinalBlock(byte[] inputBuffer, int offset, int count)
@@ -226,9 +247,7 @@ namespace Xpass
 
         private void Swap(int i, int j)
         {
-            byte temp = s[i];
-            s[i] = s[j];
-            s[j] = temp;
+            (s[j], s[i]) = (s[i], s[j]);
         }
 
         public void Dispose()

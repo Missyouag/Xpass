@@ -1,44 +1,65 @@
 ﻿using Microsoft.Win32;
+using System;
 
 namespace Xpass
 {
     internal class RegistryCache
     {
-        public static void WriteToRegistry(string key, string valueName, string value)
+        /// <summary>
+        /// 向注册表写入值
+        /// </summary>
+        /// <param name="key">注册表键路径</param>
+        /// <param name="valueName">值名称</param>
+        /// <param name="value">要存储的值</param>
+        /// <returns>是否成功写入</returns>
+        public static bool WriteToRegistry(string key, string valueName, string value)
         {
             try
             {
-                using (RegistryKey registryKey = Registry.CurrentUser.CreateSubKey(key))
+                using var registryKey = Registry.CurrentUser.CreateSubKey(key, writable: true);
+                if (registryKey == null)
                 {
-                    if (registryKey != null)
-                    {
-                        registryKey.SetValue(valueName, value);
-                        Console.WriteLine("Write to registry successful.");
-                    }
+                    Console.WriteLine($"[Error] Failed to create or open registry key: {key}");
+                    return false;
                 }
+
+                registryKey.SetValue(valueName, value);
+                Console.WriteLine($"[Success] Written to registry: {key}\\{valueName} = {value}");
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error writing to registry: " + ex.Message);
+                Console.WriteLine($"[Exception] Error writing to registry: {ex}");
+                return false;
             }
         }
 
+        /// <summary>
+        /// 从注册表读取值
+        /// </summary>
+        /// <param name="key">注册表键路径</param>
+        /// <param name="valueName">值名称</param>
+        /// <returns>读取的值（如果存在），否则为 null</returns>
         public static string? ReadFromRegistry(string key, string valueName)
         {
             try
             {
-                using RegistryKey registryKey = Registry.CurrentUser.OpenSubKey(key);
-                if (registryKey != null)
+                using var registryKey = Registry.CurrentUser.OpenSubKey(key, writable: false);
+                if (registryKey == null)
                 {
-                    return registryKey.GetValue(valueName)?.ToString();
+                    Console.WriteLine($"[Warning] Registry key not found: {key}");
+                    return null;
                 }
+
+                var value = registryKey.GetValue(valueName)?.ToString();
+                Console.WriteLine($"[Info] Read from registry: {key}\\{valueName} = {value}");
+                return value;
             }
             catch (Exception ex)
             {
-                Console.WriteLine("Error reading from registry: " + ex.Message);
+                Console.WriteLine($"[Exception] Error reading from registry: {ex}");
+                return null;
             }
-
-            return null;
         }
     }
 }
