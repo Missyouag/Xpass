@@ -195,6 +195,14 @@ namespace Xpass
 
             // 绘制行号
             e.Graphics.DrawString(rowIndex, dataGridView1.Font, brush, x, y);
+
+            // 根据行号宽度动态调整 RowHeadersWidth
+            int newWidth = (int)size.Width + 10; // 加一些额外空间，防止文本贴边
+            if (newWidth > dataGridView1.RowHeadersWidth)
+            {
+                dataGridView1.RowHeadersWidth = newWidth;
+            }
+
         }
 
         private void button1_Click(object sender, EventArgs e)
