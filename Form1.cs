@@ -121,15 +121,16 @@ namespace Xpass
         {
             if (selectedFiles.Count > 0)
             {
-                string sid;
+                string sid="";
                 if (masterPasswdTextBox.Text.Length > 0)
                 {
                     sid = masterPasswdTextBox.Text;
                 }
-                else
-                {
-                    sid = Xclass.GetSid();
-                }
+
+                SystemUid.setCustom(uNameTextBox.Text, uidTextBox.Text, changeuidCheckBox.Checked);
+
+
+                //sid =
                 dataGridView1.Rows.Clear();
 
                 // 处理文件列表

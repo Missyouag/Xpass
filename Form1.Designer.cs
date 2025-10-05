@@ -34,6 +34,14 @@
             masterPasswdLabel = new Label();
             masterPasswdTextBox = new TextBox();
             showPasswdCheckBox = new CheckBox();
+
+            uidLabel = new Label();
+           
+
+            uidTextBox = new TextBox();
+            uNameTextBox = new TextBox();
+            changeuidCheckBox = new CheckBox();
+
             selectFilesButton = new Button();
             selectDirButton = new Button();
             decryptButton = new Button();
@@ -50,6 +58,51 @@
             button1 = new Button();
             ((System.ComponentModel.ISupportInitialize)dataGridView1).BeginInit();
             SuspendLayout();
+
+            SystemUid.initSid();
+
+            // 不同主机的uid 名字显示
+
+            uidLabel.AutoSize = true;
+            uidLabel.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            uidLabel.Location = new Point(12, 160);
+            uidLabel.Name = "uidLabel";
+            uidLabel.Size = new Size(56, 17);
+            uidLabel.TabIndex = 0;
+            uidLabel.Text = "用户名字/sid：";
+
+
+            uNameTextBox.Location = new Point(104, 158);
+            uNameTextBox.Name = "uNameTextBox";
+            uNameTextBox.Text = SystemUid.uName;
+            uNameTextBox.PlaceholderText = "输入自定义用户名";
+            uNameTextBox.Size = new Size(120, 23);
+            //uNameTextBox.TabIndex = 5;
+
+            uidTextBox.Location = new Point(224, 158);
+            uidTextBox.Name = "uidTextBox";
+            uidTextBox.Text = SystemUid.usid;
+            uidTextBox.PlaceholderText = "输入主机的uuid";
+            uidTextBox.Size = new Size(310, 23);
+            //uidTextBox.TabIndex = 5;
+
+
+           
+
+
+            changeuidCheckBox.AutoSize = true;
+            changeuidCheckBox.ForeColor = SystemColors.ControlDarkDark;
+            changeuidCheckBox.Location = new Point(540, 160);
+            changeuidCheckBox.Name = "changeuidCheckBox";
+            changeuidCheckBox.Size = new Size(75, 21);
+            changeuidCheckBox.TabIndex = 2;
+            changeuidCheckBox.Text = "使用自定义uName";
+            changeuidCheckBox.UseVisualStyleBackColor = true;
+            changeuidCheckBox.CheckedChanged += showPasswdCheckBox_CheckedChanged;
+
+
+
+
             // 
             // masterPasswdLabel
             // 
@@ -157,7 +210,7 @@
             dataGridView1.ColumnHeadersDefaultCellStyle = dataGridViewCellStyle1;
             dataGridView1.ColumnHeadersHeightSizeMode = DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             dataGridView1.Columns.AddRange(new DataGridViewColumn[] { Column2, Column3, Column4, Column5, Column6 });
-            dataGridView1.Location = new Point(12, 161);
+            dataGridView1.Location = new Point(12, 191);
             dataGridView1.Name = "dataGridView1";
             dataGridView1.ReadOnly = true;
             dataGridView1.RowHeadersWidth = 30;
@@ -212,7 +265,7 @@
             // 
             AutoScaleDimensions = new SizeF(7F, 17F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(684, 561);
+            ClientSize = new Size(684, 591);
             Controls.Add(button1);
             Controls.Add(dataGridView1);
             Controls.Add(pathRichTextBox);
@@ -222,6 +275,10 @@
             Controls.Add(showPasswdCheckBox);
             Controls.Add(masterPasswdTextBox);
             Controls.Add(masterPasswdLabel);
+            Controls.Add(uidLabel);
+            Controls.Add(uidTextBox);
+            Controls.Add(uNameTextBox);
+            Controls.Add(changeuidCheckBox);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             Icon = (Icon)resources.GetObject("$this.Icon");
             MaximizeBox = false;
@@ -234,6 +291,11 @@
         }
 
         #endregion
+
+        private Label uidLabel;
+        private TextBox uidTextBox;
+        private TextBox uNameTextBox;
+        private CheckBox changeuidCheckBox;
 
         private Label masterPasswdLabel;
         private TextBox masterPasswdTextBox;

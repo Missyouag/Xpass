@@ -1,5 +1,7 @@
 ﻿using System.Collections;
+using System.IO;
 using System.Text;
+using System.Windows.Forms;
 
 namespace Xpass
 {
@@ -9,13 +11,83 @@ namespace Xpass
         public string userName;
         public string password;
         public string encryptPw;
+        public string key;
         public string port;
         public bool isok;
     }
 
+
+    class SystemUid
+    {
+        public static string usid = "";
+        public static string reversedUid = "";
+        public static string uName = "";
+
+        public static bool isCustom = false;
+        public static string cusid = "";
+        public static string creversedUid = "";
+        public static string cuName = "";
+
+        static string ReverseString(string input)
+        {
+            char[] charArray = input.ToCharArray();
+            Array.Reverse(charArray);
+            return new string(charArray);
+        }
+
+        public static void initSid()
+        {
+            try
+            {
+                string userName = Environment.UserName;
+                string domainName = Environment.UserDomainName;
+                var ntAccount = new System.Security.Principal.NTAccount(domainName, userName);
+                var sid = (System.Security.Principal.SecurityIdentifier)ntAccount.Translate(typeof(System.Security.Principal.SecurityIdentifier));
+                usid = sid.ToString();
+                uName = userName;
+                reversedUid = ReverseString(usid);
+            }
+            catch
+            {
+                
+            }
+        }
+
+
+        public static string getSid()
+        {
+            if (isCustom) return cusid;
+            return usid;
+        }
+
+        public static string getUName()
+
+        {
+            if (isCustom) return cuName;
+            return uName;
+        }
+
+
+        public static string getRvSid()
+        {
+            if (isCustom) return creversedUid;
+            return reversedUid;
+        }
+
+        public static void setCustom(string uName, string usid, bool isChecked)
+        {
+           cuName = uName;
+            cusid = usid;
+            isCustom = isChecked;
+            creversedUid = ReverseString(cusid);
+        }
+    }
+
     class Xclass
     {
-        public static Xsh FileParser(string xshPath, string sid)
+
+       
+        public static Xsh FileParser(string xshPath, string psd)
         {
             Xsh xsh = new()
             {
@@ -27,7 +99,33 @@ namespace Xpass
                 string? line;
                 while ((line = sr.ReadLine()) != null)
                 {
-                    if (System.Text.RegularExpressions.Regex.IsMatch(line, @"Host=(.*?)"))
+                    if (System.Text.RegularExpressions.Regex.IsMatch(line, @"Version=(.*?)"))
+                    {
+                        string version = line.Replace("Version=", "");
+                        float fversion = float.Parse(version);
+                        if (null== psd || psd.Length<1)
+                        {
+                            if (fversion < 7){
+                                psd = SystemUid.getUName() + SystemUid.getSid();
+                                if (fversion>=5.1&& fversion <= 5.2)
+                                {
+                                    psd = SystemUid.getSid();
+                                }
+                                else if (fversion < 5.1)
+                                {
+                                    psd = "!X@s#c$e%l^l&";
+                                }
+                            }
+                            else
+                            {
+                                psd = SystemUid.getRvSid() + SystemUid.getUName();
+                            }
+                        }
+                        
+
+
+                    }
+                    else if (System.Text.RegularExpressions.Regex.IsMatch(line, @"Host=(.*?)"))
                     {
                         xsh.host = line.Replace("Host=", "");
                     }
@@ -39,10 +137,11 @@ namespace Xpass
                     {
                         line = line.Replace("Password=", "");
                         line = line.Replace("\r\n", "");
+                        xsh.key = psd;
                         xsh.encryptPw = line;
                         if (line != null && line != "")
                         {
-                            var password = Decrypt(sid, line);
+                            var password = Decrypt(psd, line);
                             if (password == null)
                             {
                                 xsh.isok = false;
@@ -61,24 +160,11 @@ namespace Xpass
             }
             return xsh;
         }
+       
+      
+        
 
-        public static string GetSid()
-        {
-            try
-            {
-                string userName = Environment.UserName;
-                string domainName = Environment.UserDomainName;
-                var ntAccount = new System.Security.Principal.NTAccount(domainName, userName);
-                var sid = (System.Security.Principal.SecurityIdentifier)ntAccount.Translate(typeof(System.Security.Principal.SecurityIdentifier));
-                string sidString = sid.ToString();
-                string reversedString = ReverseString(sidString);
-                return reversedString + userName;
-            }
-            catch
-            {
-                return string.Empty;
-            }
-        }
+      
 
         public static List<string> GetXshFiles(string directory)
         {
@@ -124,6 +210,7 @@ namespace Xpass
         public static string? Decrypt(string sid, string encryptPw)
         {
             byte[] v1 = Convert.FromBase64String(encryptPw);
+
             byte[] key = System.Security.Cryptography.SHA256.Create().ComputeHash(Encoding.ASCII.GetBytes(sid));
 
             using var rc4 = new RC4(key);
@@ -131,22 +218,21 @@ namespace Xpass
             byte[] expectedHash = new byte[32];
             Array.Copy(v1, v1.Length - 32, expectedHash, 0, 32);
 
+            //Console.WriteLine($"值问题 {Encoding.ASCII.GetString(v3)} Hash: {Encoding.ASCII.GetString(expectedHash)}";);
             if (StructuralComparisons.StructuralEqualityComparer.Equals(System.Security.Cryptography.SHA256.Create().ComputeHash(v3), expectedHash))
             {
                 return Encoding.ASCII.GetString(v3);
             }
             else
             {
+
+                //return sid;
+                //return Encoding.ASCII.GetString(v3);
                 return null;
             }
         }
 
-        static string ReverseString(string input)
-        {
-            char[] charArray = input.ToCharArray();
-            Array.Reverse(charArray);
-            return new string(charArray);
-        }
+       
     }
 
     class RC4 : IDisposable
